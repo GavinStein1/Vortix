@@ -2,39 +2,41 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import * as web3 from 'zksync-web3';
+import { Web3Auth } from '@web3auth/modal';
 
 import Event from '@/ethereum/Event';
 import Marketplace from '@/ethereum/Marketplace';
+import { useMyContext } from '@/components/AuthProvider';
 
 const EventPage = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [ticketsLoading, setTicketsLoading] = useState(true);
-  const [provider, setProvider] = useState(null);
   const [tickets, setTickets] = useState([]);
   const [totalTickets, setTotalTickets] = useState(0);
   const [userAddress, setUserAddress] = useState("");
   const [event, setEvent] = useState(null);
   const [marketplace, setMarketplace] = useState(null);
+  const { authProvider } = useMyContext();
 
   useEffect(() => {
-    // Check if user has connected to app
-    checkMetamaskConnection();
-
-    async function fetchEventData(eventAddress, provider) {
+    if (!authProvider) {
+      router.push('/');
+    }
+    async function fetchEventData(eventAddress) {
         if (eventAddress) {
             // Connect to event contract
-            var tmpEvent = new Event(eventAddress, provider);
+            var tmpEvent = new Event(eventAddress, authProvider);
             await tmpEvent.initialize();
             setEvent(tmpEvent);
             setLoading(false);
         }
     }
 
-    async function fetchMarketplaceData(eventAddress, provider) {
+    async function fetchMarketplaceData(eventAddress) {
         if (eventAddress) {
             // Connect to marketplace contract
-            var tmpMarketplace = new Marketplace(provider);
+            var tmpMarketplace = new Marketplace(authProvider);
             setMarketplace(tmpMarketplace);
 
             // Get data from marketplace contract
@@ -72,44 +74,18 @@ const EventPage = () => {
     if (router.query.eventAddress) {
         const { eventAddress } = router.query;
         try {
-            var metamaskProvider = null;
-            // Get contract data
-            if (!provider) {
-                metamaskProvider = new web3.Web3Provider(window.ethereum);
-                setProvider(metamaskProvider);
-                metamaskProvider.listAccounts().then(
-                    (value) => {
-                        setUserAddress(value[0]);
-                    }
-                )
+          fetchEventData(eventAddress);
+          fetchMarketplaceData(eventAddress)
+          authProvider.listAccounts().then(
+            (value) => {
+                setUserAddress(value[0]);
             }
-            if (metamaskProvider) {
-                fetchEventData(eventAddress, metamaskProvider);
-                fetchMarketplaceData(eventAddress, metamaskProvider);
-            }
-            
+          )            
         } catch (err) {
             console.log(err);
         }
     }
-  }, [router.query, provider]);
-
-  const checkMetamaskConnection = async () => {
-    try {
-      // Check if Metamask is installed
-      if (window.ethereum !== 'undefined') {
-        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-
-        if (accounts.length === 0) {
-          router.push('/');
-        }
-      } else {
-        router.push('/');
-      }
-    } catch (error) {
-      console.error('Error checking MetaMask connection:', error);
-    }
-  };
+  }, [router.query]);
 
   const onClickBuyTickets = async (ticket) => {
     // get quantity to purchase
@@ -149,6 +125,9 @@ const EventPage = () => {
             {/* Render the contract data here */}
             <h1>Ticket hub: {event.name}</h1>
             <h4>Tickets available: {totalTickets}</h4>
+          </div>
+          <div>
+            {userAddress}
           </div>
           <div>
             <ul>

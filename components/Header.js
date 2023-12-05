@@ -3,32 +3,7 @@ import { useState } from 'react';
 import { Web3Auth } from '@web3auth/modal';
 import * as web3 from 'zksync-web3';
 
-const Header = ({children}) => {
-  const [provider, setProvider] = useState(null);
-
-  const setupWeb3Auth = async () => {
-    const auth = new Web3Auth({
-      clientId: "BHDH7JXeM3R7DMkve07vqlMtmnyAR4gYbi_qsGZfT73J3nO0vhbJ_GMIvhP0NKCS4A_A_8msH-IPN67Pox9VNGM", // get it from Web3Auth Dashboard
-      web3AuthNetwork: "sapphire_devnet",
-      chainConfig: {
-        chainNamespace: "eip155",
-        chainId: "0x118",
-        rpcTarget: "https://testnet.era.zksync.dev",
-        // Avoid using public rpcTarget in production.
-        // Use services like Infura, Quicknode etc
-        displayName: "Zksync Era Testnet",
-        blockExplorer: "https://goerli.explorer.zksync.io/",
-        ticker: "ETH",
-        tickerName: "Ethereum",
-      },
-    });
-    await auth.initModal();
-
-    const web3authProvider = await auth.connect();
-
-    const tmpProvider = new web3.Web3Provider(web3authProvider); // web3auth.provider
-    setProvider(tmpProvider);
-  };
+const Header = ({ children, authProvider, initAuthProvider }) => {
 
   return (
     <>
@@ -44,10 +19,17 @@ const Header = ({children}) => {
           <Link href="/about">
             <button className="button">About</button>
           </Link>
-          <Link href="/contact">
+          <Link href="/events/0x693D502eB86A21a2C7E36897193b4199C39B06a1">
             <button className="button">Contact Us</button>
           </Link>
-          <button className="button" onClick={setupWeb3Auth}>Login</button>
+          {!authProvider ? (
+            <button className="button" onClick={initAuthProvider}>Login</button>
+          ) : (
+            <Link href="/account">
+              <button className="button">Account</button>
+            </Link>
+          )}
+          
         </nav>
         <style jsx>{`
           .header {

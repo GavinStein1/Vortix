@@ -3,34 +3,33 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import * as web3 from 'zksync-web3';
 
-import { EVENT_ABI, MARKETPLACE_ABI, MARKETPLACE_CONTRACT_ADDRESS } from '@/ethereum/contracts';
 import Event from '@/ethereum/Event';
 import Marketplace from '@/ethereum/Marketplace';
+import { useMyContext } from '@/components/AuthProvider';
+import Header from '@/components/Header';
 
 const EventPage = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
-  const [provider, setProvider] = useState(null);
   const [event, setEvent] = useState(null);
   const [marketplace, setMarketplace] = useState(null);
+  const { authProvider } = useMyContext();
 
   useEffect(() => {
-    // Check if user has connected to app
-    checkMetamaskConnection();
-
+    if (!authProvider) {
+      router.push('/');
+    }
     async function fetchData(eventAddress) {
         if (eventAddress) {
             // Connect to metamask and create Event instance
-            const metamaskProvider = new web3.Web3Provider(window.ethereum);
-            var tmpEvent = new Event(eventAddress, metamaskProvider);
+            var tmpEvent = new Event(eventAddress, authProvider);
             await tmpEvent.initialize();
-            var tmpMarketplace = new Marketplace(metamaskProvider);
-            setProvider(metamaskProvider);
+            var tmpMarketplace = new Marketplace(authProvider);
             setEvent(tmpEvent);
             setMarketplace(tmpMarketplace);
 
-            const accountAddr = await metamaskProvider.listAccounts();
+            const accountAddr = await authProvider.listAccounts();
             if (tmpEvent.owner === accountAddr[0]) {
                 setIsOwner(true);
             }     
@@ -48,23 +47,6 @@ const EventPage = () => {
         }
     }
   }, [router.query]);
-
-  const checkMetamaskConnection = async () => {
-    try {
-      // Check if Metamask is installed
-      if (window.ethereum !== 'undefined') {
-        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-
-        if (accounts.length === 0) {
-          router.push('/');
-        }
-      } else {
-        router.push('/');
-      }
-    } catch (error) {
-      console.error('Error checking MetaMask connection:', error);
-    }
-  };
 
   // Function to navigate to the "Marketplace" page
   const navigateToMarketplace = () => {
@@ -97,10 +79,9 @@ const EventPage = () => {
     }
   };
 
-  const onClickListTicketType = async (id, price) => {    
+  const onClickListTicketType = async (id, price) => {   
     // get number of tickets
     var quantity = await event.balanceOf(event.owner, id);
-    quantity = quantity.toNumber();
 
     // check/get approval
     var tx = await event.isApprovedForAll(event.owner, marketplace.address);
@@ -114,8 +95,10 @@ const EventPage = () => {
     alert('ticket/s listed');
   }
 
-  const changeLoading = () => {
-    setLoading(!loading);
+  const getBalance = async () => {
+    var bal = await event.balanceOf('0x436b10FdCeFB13e16014c3c63f9E2E740A33d820', 1);
+    console.log(bal);
+
   }
 
   return (
@@ -123,7 +106,7 @@ const EventPage = () => {
       {loading ? (
         <p>Loading...</p>
       ) : (
-        <>
+        <Header authProvider={authProvider}>
           {/* Display contract data */}
           <div className="contract-data">
             {/* Render the contract data here */}
@@ -160,7 +143,7 @@ const EventPage = () => {
                         <div>
                             <p>{item.name}</p>
                             {isOwner ? (
-                                <button className="button" onClick={async () => onClickListTicketType(item.id, item.price)}>List</button>
+                                <button className="button" onClick={async () => onClickListTicketType(item.id, item.value)}>List</button>
                             ) : (
                                 <></>
                             )}
@@ -174,9 +157,11 @@ const EventPage = () => {
                 )}
             </ul>
           </div>
-        </>
+        </Header>
       )}
+      <button onClick={getBalance}>balance</button>
     </div>
+    
   );
 };
 

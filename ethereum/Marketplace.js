@@ -24,7 +24,7 @@ class Marketplace {
             addr = addr[0];
         }
         const price = await this.getTicketPrice(eventAddress, addr, ticketId);
-        listingIDs = await this.getListingIDs(eventAddress, addr);
+        const listingIDs = await this.getListingIDs(eventAddress, addr);
 
         if (listingIDs.length === 0 || price === 0) {
             console.log('No listing exists to cancel');
@@ -82,7 +82,7 @@ class Marketplace {
         const signer = this.provider.getSigner();
         const connectedContract = this.contract.connect(signer);
         const overrides = {
-            gasLimit: 8000000
+            gasLimit: '8000000'
         }
         const tx = await connectedContract.listTicket(eventAddress, ticketId, price, amount, overrides);
         await tx.wait();
@@ -140,7 +140,7 @@ class Marketplace {
     async withdrawProceeds() {
         var addr = await this.provider.listAccounts();
         addr = addr[0];
-        const proceeds = this.getProceeds();
+        const proceeds = await this.getProceeds();
         if (proceeds === 0) {
             console.log('no proceeds to withdraw');
             return;
